@@ -1,1 +1,108 @@
+#Configuraciones
 
+
+const express = require('express');
+const mysql = require('mysql2');
+const compression = require('compression');
+const methodOverride = require('method-override');
+const app = express();
+
+// Configuración de middleware
+app.use(express.json());
+app.use(compression());
+app.use(express.urlencoded({ extended: true }));
+app.use(methodOverride('_method'));
+app.set('view engine', 'ejs');
+app.set('views', '/mnt/raid1/crud-app/views'); // Ruta absoluta a las vistas
+
+// Conexión a la base de datos MariaDB
+const connection = mysql.createConnection({
+  host: '192.168.226.103', // IP del Servidor DB Maestro
+  user: 'crud_user',
+  password: 'crudpassword',
+  database: 'crud_db',
+  port: 3306,
+  connectTimeout: 30000
+});
+
+connection.connect((err) => {
+  if (err) {
+    console.error('Database connection failed: ', err);
+    process.exit(1);
+  }
+  console.log('Connected to MariaDB for phone store!');
+});
+
+connection.on('error', (err) => {
+  console.error('Database error: ', err);
+  if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+    console.log('Reconnecting to database...');
+    connection.connect();
+  } else {
+    throw err;
+  }
+});
+
+// Rutas CRUD
+// Mostrar todos los teléfonos
+app.get('/phones', (req, res) => {
+  connection.query('SELECT * FROM phones', (err, results) => {
+    if (err) return res.status(500).send(err);
+    res.render('phones', { phones: results });
+  });
+});
+
+// Mostrar formulario para crear
+app.get('/phones/new', (req, res) => {
+  res.render('new');
+});
+
+// Crear un nuevo teléfono
+app.post('/phones', (req, res) => {
+  const { model, brand, price, stock } = req.body;
+  connection.query(
+    'INSERT INTO phones (model, brand, price, stock) VALUES (?, ?, ?, ?)',
+    [model, brand, price, stock],
+    (err) => {
+      if (err) return res.status(500).send(err);
+      res.redirect('/phones');
+    }
+  );
+});
+
+// Mostrar formulario para editar
+app.get('/phones/edit/:id', (req, res) => {
+  const id = req.params.id;
+  connection.query('SELECT * FROM phones WHERE id = ?', [id], (err, results) => {
+    if (err || results.length === 0) return res.status(404).send('Phone not found');
+    res.render('edit', { phone: results[0] });
+  });
+});
+
+// Actualizar un teléfono
+app.put('/phones/:id', (req, res) => {
+  const id = req.params.id;
+  const { model, brand, price, stock } = req.body;
+  connection.query(
+    'UPDATE phones SET model = ?, brand = ?, price = ?, stock = ? WHERE id = ?',
+    [model, brand, price, stock, id],
+    (err) => {
+      if (err) return res.status(500).send(err);
+      res.redirect('/phones');
+    }
+  );
+});
+
+// Eliminar un teléfono
+app.delete('/phones/:id', (req, res) => {
+  const id = req.params.id;
+  connection.query('DELETE FROM phones WHERE id = ?', [id], (err) => {
+    if (err) return res.status(500).send(err);
+    res.redirect('/phones');
+  });
+});
+
+// Iniciar el servidor
+app.listen(3000, () => {
+  console.log('Phone store server running on port 3000');
+});
