@@ -1,1 +1,157 @@
+#Configuracion Netplan para cada servidor (5 servidores) IPs estáticas
+
+sudo nano /etc/netplan/50-cloud-init.yaml
+network:
+  version: 2
+  ethernets:
+    ens33:
+      dhcp4: no
+      addresses: [192.168.226.100/24] #101,102,103,104
+      routes:
+       - to: default
+         via: 192.168.226.1
+      nameservers:
+        addresses: [8.8.8.8, 8.8.4.4]
+
+#Configuraciones para Nginx
+
+ /etc/nginx/sites-enabled/proxy_balance.conf 
+upstream backend_apps {
+    # Servidor Aplicación 1 (en PC2)
+    server 192.168.226.101:3000;
+    # IP y puerto de App1
+    # Servidor Aplicación 2 (en PC2)
+    server 192.168.226.102:3000;
+    # IP y puerto de App2
+
+}
+
+server {
+    listen 80;
+    # NGINX escuchará en el puerto 80 (HTTP)
+
+    # Opcional: Nombre del servidor o IP pública. 
+    server_name 192.168.226.100;
+    # O tu IP pública si accedes desde fuera de la red local
+
+    location / {
+        proxy_pass http://backend_apps;
+        # Envía peticiones al pool de backends
+        proxy_set_header Host $host;
+        # Pasa el encabezado Host original
+        proxy_set_header X-Real-IP $remote_addr;
+        # Pasa la IP real del cliente
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        # Pasa el historial de IPs proxy
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Pasa el protocolo original (http/https)
+    }
+}
+
+#Configuracion para base de datos (Maestro)
+
+sudo nano /etc/mysql/mariadb.conf.d/50-server.cnf
+#
+# These groups are read by MariaDB server.
+# Use it for options that only the server (but not clients) should see
+
+# this is read by the standalone daemon and embedded servers
+[server]
+
+# this is only for the mysqld standalone daemon
+[mysqld]
+
+# Opcional: Especifica el nombre de la DB de tu aplicación, si solo quieres replicar esa.
+#
+# * Basic Settings
+#
+
+#user                    = mysql
+pid-file                = /run/mysqld/mysqld.pid
+basedir                 = /usr
+datadir                 = /mnt/raid5_db/mysql
+#tmpdir                  = /tmp
+
+# Broken reverse DNS slows down connections considerably and name resolve is
+# safe to skip if there are no "host by domain name" access grants
+#skip-name-resolve
+
+# Instead of skip-networking the default is now to listen only on
+# localhost which is more compatible and is not less secure.
+bind-address            = 0.0.0.0
+
+#
+# * Fine Tuning
+#
+
+#key_buffer_size        = 128M
+#max_allowed_packet     = 1G
+#thread_stack           = 192K
+#thread_cache_size      = 8
+# The following can be used as easy to replay backup logs or for replication.
+# note: if you are setting up a replica, see README.Debian about other
+#       settings you may need to change.
+server-id              = 1
+log_error               = /mnt/raid5_db/mysql/logs/error.log
+log_bin                = /mnt/raid5_db/mysql/logs/mysql-bin.log
+expire_logs_days        = 10
+#max_binlog_size        = 100M
+
+
+
+#CONFIGURACION PARA BASE DE DATOS ESCLAVO
+
+
+# this is read by the standalone daemon and embedded servers
+[server]
+
+# this is only for the mysqld standalone daemon
+[mysqld]
+
+# Opcional: Especifica el nombre de la DB de tu aplicación, si solo quieres replicar esa.
+#
+# * Basic Settings
+#
+
+#user                    = mysql
+pid-file                = /run/mysqld/mysqld.pid
+basedir                 = /usr
+datadir                 = /mnt/raid5_db/mysql
+#tmpdir                  = /tmp
+
+# Broken reverse DNS slows down connections considerably and name resolve is
+# safe to skip if there are no "host by domain name" access grants
+#skip-name-resolve
+
+# Instead of skip-networking the default is now to listen only on
+# localhost which is more compatible and is not less secure.
+bind-address            = 0.0.0.0
+#       settings you may need to change.
+server-id              = 2
+log_error               = /mnt/raid5_db/mysql/logs/error.log
+log_bin                = /mnt/raid5_db/mysql/logs/mysql-bin.log
+expire_logs_days        = 10
+#max_binlog_size        = 100M
+
+
+#Configuracion de SSH
+
+Port 2224
+#AddressFamily any
+ListenAddress 0.0.0.0
+#ListenAddress ::
+PermitRootLogin no
+#StrictModes yes
+#MaxAuthTries 6
+#MaxSessions 10
+
+PubkeyAuthentication yes
+# To disable tunneled clear text passwords, change to no here!
+PasswordAuthentication no
+#PermitEmptyPasswords no
+
+# Change to yes to enable challenge-response passwords (beware issues with
+# some PAM modules and threads)
+KbdInteractiveAuthentication no
+
 
