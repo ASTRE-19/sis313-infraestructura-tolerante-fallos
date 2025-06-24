@@ -102,7 +102,57 @@ app.delete('/phones/:id', (req, res) => {
   });
 });
 
+
 // Iniciar el servidor
 app.listen(3000, () => {
   console.log('Phone store server running on port 3000');
 });
+
+
+//Este archivo es la vista principal que muestra la lista de teléfonos y permite operaciones CRUD.
+//Código Fuente del Archivo HTML/EJS (views/phones.ejs)
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Phone Store</title>
+  <style>
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    .btn { padding: 5px 10px; text-decoration: none; color: white; }
+    .btn-edit { background-color: #4CAF50; }
+    .btn-delete { background-color: #f44336; }
+  </style>
+</head>
+<body>
+  <h1>Phone Store</h1>
+  <a href="/phones/new">Add New Phone</a>
+  <table>
+    <tr>
+      <th>ID</th>
+      <th>Model</th>
+      <th>Brand</th>
+      <th>Price</th>
+      <th>Stock</th>
+      <th>Actions</th>
+    </tr>
+    <% phones.forEach(phone => { %>
+      <tr>
+        <td><%= phone.id %></td>
+        <td><%= phone.model %></td>
+        <td><%= phone.brand %></td>
+        <td><%= phone.price %></td>
+        <td><%= phone.stock %></td>
+        <td>
+          <a href="/phones/edit/<%= phone.id %>" class="btn btn-edit">Edit</a>
+          <form action="/phones/<%= phone.id %>?_method=DELETE" method="POST" style="display:inline;">
+            <button type="submit" class="btn btn-delete">Delete</button>
+          </form>
+        </td>
+      </tr>
+    <% }); %>
+  </table>
+</body>
+</html>
